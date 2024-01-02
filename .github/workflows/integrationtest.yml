@@ -1,0 +1,94 @@
+# name: Integration Test on Dev/Rel Account
+
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     types:
+#       - opened
+#     branches:
+#       - 'main/**'
+#     inputs:
+#       account_type:
+#         type: choice
+#         description: Type of Account
+#         options: 
+#         - DEV
+#         - REL
+#   schedule:
+#     - cron: '41 3 * * *' # runs nightly at 3:41 am
+# env:
+#   AWS_REGION: "eu-north-1"
+# # Permission can be added at job level or workflow level
+# permissions:
+#   id-token: write  # This is required for requesting the JWT
+#   contents: read   # This is required for actions/checkout
+
+# jobs:
+#   ITTestWorkFlow:
+#     runs-on: ${{ github.event.inputs.account_type == 'DEV' && 'self-hosted' || 'rel-hosted' }}
+#     steps:
+#       - name: Git clone the repository
+#         uses: actions/checkout@v4
+
+#       - name: Setup Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.8'
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1.7.0
+#         with:
+#           role-to-assume: ${{ github.event.inputs.account_type == 'DEV' && secrets.UT_ROLE_NAME_DEV || secrets.UT_ROLE_NAME_REL }}
+#           role-session-name: GitHub_to_AWS_via_FederatedOIDC
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - name: Sts GetCallerIdentity
+#         run: |
+#           aws sts get-caller-identity
+#           aws s3 ls
+
+#       - name: Set up Go
+#         uses: actions/setup-go@v4
+#         with:
+#           go-version: '1.21.3'
+
+#       # Install the latest version of Terraform CLI
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v2
+#         with:
+#           terraform_wrapper: false
+
+#       # Setup Terraform init
+#       - name: Setup terraform init
+#         working-directory: ${{ github.event.inputs.account_type == 'DEV' && './infrastructure/code/environments/dev' || './infrastructure/code/environments/release' }}
+#         run: terraform init -reconfigure
+
+#       # Get all golang dependencies
+#       - name: Get dependencies
+#         working-directory: ./infrastructure/test/integrationtests
+#         run: go mod tidy
+
+#       # Run tests
+#       - name: Run Full Integration Test
+#         working-directory: ./infrastructure/test/integrationtests
+#         run: ENVIRONMENT=${{ github.event.inputs.account_type || 'REL' }} go test -v -timeout 90m
+#       # Additional Step: Write Summary
+#       - name: Write Test Summary
+#         id: write-summary
+#         run: echo "::set-output name=summary::Integration tests passed successfully in ${{ github.event.inputs.account_type || 'REL' }} environment."
+
+
+#       - name: Slack Notification
+#         if: always()  # Ensure this step runs even if previous steps fail
+#         uses: rtCamp/action-slack-notify@v2
+#         env:
+#           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+#           SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+#           SLACK_ICON: https://github.com/github.png?size=460
+#           SLACK_MESSAGE: "Summary: Integration tests ${{ job.status }} in ${{ github.event.inputs.account_type || 'REL' }} environment."
+#           SLACK_TITLE: Infrastructure Changes Notification
+#           SLACK_USERNAME: GithubActionSlackBot
+#           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

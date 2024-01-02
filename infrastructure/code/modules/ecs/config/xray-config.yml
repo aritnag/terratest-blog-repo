@@ -1,0 +1,11 @@
+Version: 2
+
+Socket:
+  UDPAddress: "127.0.0.1:2000"
+  TCPAddress: "127.0.0.1:2000"
+
+Region: "eu-north-1"
+
+Logging:
+  LogLevel: "warn"
+  LogPath: "/var/log/xray/xray.log"
