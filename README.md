@@ -21,10 +21,14 @@
 
 ```bash
 ├── infrastructure/          # infrastructure definitions
-│   └── data    # data files
-├── runtime/         # runtime codes
-│   └── containers    # instances source codes
-│   └── functions    # lambda function
+│   └── code 
+│       └── modules    
+│       └── environment    
+│           └── dev    
+│   └── test 
+│       └── integrationtests 
+│       └── unittests 
+├── application/         # application codes
 ```
 
 ## Setup
